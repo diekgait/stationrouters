@@ -1,0 +1,53 @@
+hostname R3
+!
+interface Loopback0
+ip address 172.16.0.3 255.255.255.255
+!
+interface Loopback1
+ip address 10.0.3.1 255.255.255.0
+!
+!
+crypto isakmp policy 10
+ encr aes
+ authentication pre-share
+ group 19
+crypto isakmp key cisco123 address 0.0.0.0 0.0.0.0
+!
+crypto ipsec transform-set TSET esp-aes esp-sha256-hmac
+ mode transport
+!
+access-list 100 deny   udp any eq 3784 any
+access-list 100 deny   udp any any eq 3784
+access-list 100 deny   udp any eq 3785 any
+access-list 100 deny   udp any any eq 3785
+access-list 100 permit ip any any
+!
+crypto map R1 10 ipsec-isakmp
+ set peer 192.168.0.2 
+ set transform-set TSET
+ match address 100
+!
+interface Gi0/0
+ip address 192.168.0.3 255.255.255.254
+ip ospf network point-to-point
+description Link_to_R1
+crypto map R1
+no shutdown
+!
+crypto map R4 10 ipsec-isakmp
+ set peer 192.168.0.7 
+ set transform-set TSET
+ match address 100
+!
+interface Gi0/1
+ip address 192.168.0.6 255.255.255.254
+ip ospf network point-to-point
+description Link_to_R4
+crypto map R4
+no shutdown
+!
+router ospf 1
+network 172.16.0.3 0.0.0.0 area 0
+network 10.0.3.0 0.0.0.255 area 0
+network 192.168.0.0 0.0.0.255 area 0
+!
