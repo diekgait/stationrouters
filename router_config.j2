@@ -1,0 +1,48 @@
+hostname {{ inventory_hostname }}
+!
+no cdp run
+!
+interface Loopback0
+ip address 172.16.0.{{ router_number }} 255.255.255.255
+!
+interface Loopback1
+ip address 10.0.{{ router_number }}.1 255.255.255.0
+!
+!
+crypto isakmp policy 10
+ encr aes
+ authentication pre-share
+ group 19
+crypto isakmp key cisco123 address 0.0.0.0 0.0.0.0
+!
+crypto ipsec transform-set TSET esp-aes esp-sha256-hmac
+ mode tunnel
+!
+access-list 100 deny   udp any eq 3784 any
+access-list 100 deny   udp any any eq 3784
+access-list 100 deny   udp any eq 3785 any
+access-list 100 deny   udp any any eq 3785
+access-list 100 permit ip any any
+!
+{% for link in links %}
+crypto map {{ link.neighbor }} 10 ipsec-isakmp
+ set peer {{ link.neighbor_ip }} 
+ set transform-set TSET
+ match address 100
+!
+interface {{ link.interface }}
+ip address {{ link.ip }} 255.255.255.254
+ip ospf network point-to-point
+description Link_to_{{ link.neighbor }}
+no keepalive
+bfd interval 100 min_rx 100 multiplier 3
+crypto map {{ link.neighbor }}
+no shutdown
+!
+{% endfor %}
+router ospf 1
+network 172.16.0.{{ router_number }} 0.0.0.0 area 0
+network 10.0.{{ router_number }}.0 0.0.0.255 area 0
+network 192.168.0.0 0.0.0.255 area 0
+bfd all-interfaces
+!

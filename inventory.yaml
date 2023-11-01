@@ -1,0 +1,79 @@
+all:
+  hosts:
+    R1:
+      ansible_host: 10.0.0.1
+      router_number: 1
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.0
+          neighbor: R2
+          neighbor_ip: 192.168.0.1
+        - interface: Gi0/1
+          ip: 192.168.0.2
+          neighbor: R3
+          neighbor_ip: 192.168.0.3
+
+    R2:
+      ansible_host: 10.0.0.2
+      router_number: 2
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.1
+          neighbor: R1
+          neighbor_ip: 192.168.0.0
+        - interface: Gi0/1
+          ip: 192.168.0.4
+          neighbor: R5
+          neighbor_ip: 192.168.0.5
+
+    R3:
+      ansible_host: 10.0.0.3
+      router_number: 3
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.3
+          neighbor: R1
+          neighbor_ip: 192.168.0.2
+        - interface: Gi0/1
+          ip: 192.168.0.6
+          neighbor: R4
+          neighbor_ip: 192.168.0.7
+
+    R4:
+      ansible_host: 10.0.0.4
+      router_number: 4
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.7
+          neighbor: R3
+          neighbor_ip: 192.168.0.6
+        - interface: Gi0/1
+          ip: 192.168.0.8
+          neighbor: R5
+          neighbor_ip: 192.168.0.9
+
+    R5:
+      ansible_host: 10.0.0.5
+      router_number: 5
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.5
+          neighbor: R2
+          neighbor_ip: 192.168.0.4
+        - interface: Gi0/1
+          ip: 192.168.0.9
+          neighbor: R4
+          neighbor_ip: 192.168.0.8
+        - interface: Gi0/2
+          ip: 192.168.0.12
+          neighbor: R6
+          neighbor_ip: 192.168.0.13
+
+    R6:
+      ansible_host: 10.0.0.6
+      router_number: 6
+      links:
+        - interface: Gi0/0
+          ip: 192.168.0.13
+          neighbor: R5
+          neighbor_ip: 192.168.0.12

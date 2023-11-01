@@ -1,0 +1,15 @@
+---
+- name: Generate Router Configurations
+  hosts: all
+  gather_facts: no
+  vars:
+    loopback_ip_base: 172.16.0.
+    secondary_loopback_subnet: 10.0
+    ipsec_key: "my_secure_key"
+  tasks:
+    - name: Generate configuration
+      template:
+        src: router_config.j2
+        dest: "./configs/config_for_{{ inventory_hostname }}"
+      vars:
+        ansible_connection: local
