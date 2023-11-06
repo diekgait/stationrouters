@@ -2,34 +2,44 @@ hostname {{ inventory_hostname }}
 !
 no cdp run
 !
+{# Loopback voor router #}
 interface Loopback0
 ip address 172.16.0.{{ router_number }} 255.255.255.255
 !
+{# Loopback met netwerk dat achterliggend subnet representeerd #}
 interface Loopback1
 ip address 10.0.{{ router_number }}.1 255.255.255.0
 !
-!
+{# Crypto policy met Elliptic Curve Diffie-Hellman en AES encryptie #}
 crypto isakmp policy 10
  encr aes
  authentication pre-share
  group 19
-crypto isakmp key cisco123 address 0.0.0.0 0.0.0.0
+!
+{# Een IPSEC Pre Shared Key voor alle neighbors. Wellicht in de toekomst per neighbor uniek maken #}
+crypto isakmp key {{ ipsec_key }} address 0.0.0.0 0.0.0.0
 !
 crypto ipsec transform-set TSET esp-aes esp-sha256-hmac
  mode tunnel
 !
-access-list 100 deny   udp any eq 3784 any
-access-list 100 deny   udp any any eq 3784
-access-list 100 deny   udp any eq 3785 any
-access-list 100 deny   udp any any eq 3785
-access-list 100 permit ip any any
-!
+{# IPSEC config per neighbor #}
 {% for link in links %}
+{# ACL die BFD uitzonderd van de cryptomap en rest encrypt #}
+{% set link_network_address = (link.ip | ansible.utils.ipsubnet('31')).split('/')[0] %}
+access-list 10{{ link.neighbor[1:] }} deny udp {{ link_network_address }} 0.0.0.1 {{ link_network_address }} 0.0.0.1 eq 3784
+access-list 10{{ link.neighbor[1:] }} deny udp {{ link_network_address }} 0.0.0.1 {{ link_network_address }} 0.0.0.1 eq 3785
+access-list 10{{ link.neighbor[1:] }} deny udp {{ link_network_address }} 0.0.0.1 eq 3784 {{ link_network_address }} 0.0.0.1
+access-list 10{{ link.neighbor[1:] }} deny udp {{ link_network_address }} 0.0.0.1 eq 3785 {{ link_network_address }} 0.0.0.1
+access-list 10{{ link.neighbor[1:] }} permit ip any any
+!
 crypto map {{ link.neighbor }} 10 ipsec-isakmp
  set peer {{ link.neighbor_ip }} 
  set transform-set TSET
- match address 100
+ match address 10{{ link.neighbor[1:] }}
 !
+{% endfor %}
+{# Interface config per neighbor #}
+{% for link in links %}
 interface {{ link.interface }}
 ip address {{ link.ip }} 255.255.255.254
 ip ospf network point-to-point
@@ -38,6 +48,15 @@ no keepalive
 bfd interval 100 min_rx 100 multiplier 3
 crypto map {{ link.neighbor }}
 no shutdown
+!
+{% endfor %}
+{# IP SLA config per neighbor om IPSEC-tunnel te triggeren na reboot #}
+{% for link in links %}
+ip sla {{ link.neighbor[1:] }}
+ icmp-echo {{ link.neighbor_ip }} source-interface {{ link.interface }}
+ timeout 5000
+ frequency 10
+ip sla schedule {{ link.neighbor[1:] }} life forever start-time now
 !
 {% endfor %}
 router ospf 1

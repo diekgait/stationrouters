@@ -13,21 +13,44 @@ crypto isakmp policy 10
  encr aes
  authentication pre-share
  group 19
-crypto isakmp key cisco123 address 0.0.0.0 0.0.0.0
+!
+crypto isakmp key my_secure_key address 0.0.0.0 0.0.0.0
 !
 crypto ipsec transform-set TSET esp-aes esp-sha256-hmac
  mode tunnel
 !
-access-list 100 deny   udp any eq 3784 any
-access-list 100 deny   udp any any eq 3784
-access-list 100 deny   udp any eq 3785 any
-access-list 100 deny   udp any any eq 3785
-access-list 100 permit ip any any
+access-list 102 deny udp 192.168.0.4 0.0.0.1 192.168.0.4 0.0.0.1 eq 3784
+access-list 102 deny udp 192.168.0.4 0.0.0.1 192.168.0.4 0.0.0.1 eq 3785
+access-list 102 deny udp 192.168.0.4 0.0.0.1 eq 3784 192.168.0.4 0.0.0.1
+access-list 102 deny udp 192.168.0.4 0.0.0.1 eq 3785 192.168.0.4 0.0.0.1
+access-list 102 permit ip any any
 !
 crypto map R2 10 ipsec-isakmp
  set peer 192.168.0.4 
  set transform-set TSET
- match address 100
+ match address 102
+!
+access-list 104 deny udp 192.168.0.8 0.0.0.1 192.168.0.8 0.0.0.1 eq 3784
+access-list 104 deny udp 192.168.0.8 0.0.0.1 192.168.0.8 0.0.0.1 eq 3785
+access-list 104 deny udp 192.168.0.8 0.0.0.1 eq 3784 192.168.0.8 0.0.0.1
+access-list 104 deny udp 192.168.0.8 0.0.0.1 eq 3785 192.168.0.8 0.0.0.1
+access-list 104 permit ip any any
+!
+crypto map R4 10 ipsec-isakmp
+ set peer 192.168.0.8 
+ set transform-set TSET
+ match address 104
+!
+access-list 106 deny udp 192.168.0.12 0.0.0.1 192.168.0.12 0.0.0.1 eq 3784
+access-list 106 deny udp 192.168.0.12 0.0.0.1 192.168.0.12 0.0.0.1 eq 3785
+access-list 106 deny udp 192.168.0.12 0.0.0.1 eq 3784 192.168.0.12 0.0.0.1
+access-list 106 deny udp 192.168.0.12 0.0.0.1 eq 3785 192.168.0.12 0.0.0.1
+access-list 106 permit ip any any
+!
+crypto map R6 10 ipsec-isakmp
+ set peer 192.168.0.13 
+ set transform-set TSET
+ match address 106
 !
 interface Gi0/0
 ip address 192.168.0.5 255.255.255.254
@@ -38,11 +61,6 @@ bfd interval 100 min_rx 100 multiplier 3
 crypto map R2
 no shutdown
 !
-crypto map R4 10 ipsec-isakmp
- set peer 192.168.0.8 
- set transform-set TSET
- match address 100
-!
 interface Gi0/1
 ip address 192.168.0.9 255.255.255.254
 ip ospf network point-to-point
@@ -52,11 +70,6 @@ bfd interval 100 min_rx 100 multiplier 3
 crypto map R4
 no shutdown
 !
-crypto map R6 10 ipsec-isakmp
- set peer 192.168.0.13 
- set transform-set TSET
- match address 100
-!
 interface Gi0/2
 ip address 192.168.0.12 255.255.255.254
 ip ospf network point-to-point
@@ -65,6 +78,24 @@ no keepalive
 bfd interval 100 min_rx 100 multiplier 3
 crypto map R6
 no shutdown
+!
+ip sla 2
+ icmp-echo 192.168.0.4 source-interface Gi0/0
+ timeout 5000
+ frequency 10
+ip sla schedule 2 life forever start-time now
+!
+ip sla 4
+ icmp-echo 192.168.0.8 source-interface Gi0/1
+ timeout 5000
+ frequency 10
+ip sla schedule 4 life forever start-time now
+!
+ip sla 6
+ icmp-echo 192.168.0.13 source-interface Gi0/2
+ timeout 5000
+ frequency 10
+ip sla schedule 6 life forever start-time now
 !
 router ospf 1
 network 172.16.0.5 0.0.0.0 area 0
